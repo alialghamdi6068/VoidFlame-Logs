@@ -1,0 +1,9 @@
+name: VoidFlame-Logs
+version: 1.0.0
+main: net.voidflame.logs.VoidFlameLogsPlugin
+description: Logs module for VoidFlame MC.
+author: VoidFlame
+website: https://github.com/alialghamdi6068/VoidFlame-Logs
+api-version: '26.2'
+load: POSTWORLD
+depend: [VoidFlame-Core]
