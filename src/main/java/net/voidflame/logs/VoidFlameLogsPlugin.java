@@ -15,7 +15,7 @@ public final class VoidFlameLogsPlugin extends JavaPlugin implements Listener {
  private Object storage; private Method put,get; private LogService logs;
  public static final class LogService {
   private final VoidFlameLogsPlugin p; LogService(VoidFlameLogsPlugin p){this.p=p;}
-  public CompletableFuture<Void> log(String type,String message){return p.put(System.currentTimeMillis()+"-"+type,type+"|"+message);}
+  public CompletableFuture<Void> log(String type,String message){return p.put(System.currentTimeMillis()+"-"+java.util.UUID.randomUUID(),type+"|"+message);}
  }
  @Override public void onEnable(){saveDefaultConfig();if(!connectStorage()){getLogger().severe("VoidFlame-Core storage unavailable.");getServer().getPluginManager().disablePlugin(this);return;}logs=new LogService(this);getServer().getServicesManager().register(LogService.class,logs,this,ServicePriority.Normal);getServer().getPluginManager().registerEvents(this,this);getLogger().info("VoidFlame-Logs enabled.");}
  private boolean connectStorage(){try{Class<?> t=Class.forName("net.voidflame.core.storage.StorageService");RegisteredServiceProvider<?> r=getServer().getServicesManager().getRegistration(t);if(r==null)return false;storage=r.getProvider();put=t.getMethod("put",String.class,String.class,String.class);get=t.getMethod("get",String.class,String.class);return true;}catch(ReflectiveOperationException e){return false;}}
