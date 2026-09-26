@@ -7,3 +7,14 @@ website: https://github.com/alialghamdi6068/VoidFlame-Logs
 api-version: '26.2'
 load: POSTWORLD
 depend: [VoidFlame-Core]
+
+commands:
+  vflogs:
+    description: View recent VoidFlame audit logs.
+    usage: /vflogs [10|25|50]
+    permission: voidflame.logs.view
+
+permissions:
+  voidflame.logs.view:
+    description: View VoidFlame audit logs.
+    default: op
