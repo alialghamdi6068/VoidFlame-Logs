@@ -70,10 +70,13 @@ public final class VoidFlameLogsPlugin extends JavaPlugin implements Listener {
         if(!actor.isBlank()){sql.append(" AND actor LIKE ?");params.add("%"+actor+"%");}
         sql.append(" ORDER BY timestamp DESC LIMIT ? OFFSET ?");
         params.add(limit); params.add(offset);
+        final int requestedPage = page;
+        final String requestedAction = action;
+        final String requestedActor = actor;
         storage.database().query(sql.toString(), params.toArray())
             .thenAccept(rows -> Bukkit.getScheduler().runTask(this,()->{
                 sender.sendMessage("§8§m----------------");
-                sender.sendMessage("§bVoidFlame Logs §7Page "+page+" §8| §faction="+(action.isBlank()?"*":action)+" §8| §factor="+(actor.isBlank()?"*":actor));
+                sender.sendMessage("§bVoidFlame Logs §7Page "+requestedPage+" §8| §faction="+(requestedAction.isBlank()?"*":requestedAction)+" §8| §factor="+(requestedActor.isBlank()?"*":requestedActor));
                 if(rows.isEmpty()) sender.sendMessage("§7No logs matched.");
                 for(var row:rows) sender.sendMessage("§7• §f"+format(row));
                 sender.sendMessage("§8§m----------------");
