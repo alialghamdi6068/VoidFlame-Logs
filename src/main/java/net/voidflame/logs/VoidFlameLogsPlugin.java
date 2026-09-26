@@ -41,7 +41,9 @@ public final class VoidFlameLogsPlugin extends JavaPlugin implements Listener {
         getLogger().info("VoidFlame-Logs enabled.");
     }
 
-    private static String safe(String s){return s==null?"":s.replace("\\","/").replace("\"","\\\"").replace("\n"," ").replace("\r"," ");}\n    private static String json(String s){return "\"" + safe(s) + "\"";}\n    private static String format(Map<String,Object> row){return "["+row.get("timestamp")+"] "+row.get("actor")+" "+row.get("action")+" -> "+row.get("target")+" | "+row.get("metadata_json");}
+    private static String safe(String s){return s==null?"":s.replace("\\","/").replace("\"","\\\"").replace("\n"," ").replace("\r"," ");}
+    private static String json(String s){return "\"" + safe(s) + "\"";}
+    private static String format(Map<String,Object> row){return "["+row.get("timestamp")+"] "+row.get("actor")+" "+row.get("action")+" -> "+row.get("target")+" | "+row.get("metadata_json");}
 
     @EventHandler public void join(PlayerJoinEvent e){logs.log(e.getPlayer().getUniqueId().toString(),"JOIN",e.getPlayer().getName(),"firstJoin="+e.getPlayer().hasPlayedBefore());}
     @EventHandler public void quit(PlayerQuitEvent e){logs.log(e.getPlayer().getUniqueId().toString(),"QUIT",e.getPlayer().getName(),"");}
