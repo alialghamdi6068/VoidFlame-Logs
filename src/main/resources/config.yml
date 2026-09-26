@@ -1,3 +1,4 @@
+# VoidFlame compatibility: Paper 26.2 / Java 25
 settings:
   enabled: true
   module: logs
