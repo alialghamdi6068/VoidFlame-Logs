@@ -68,5 +68,8 @@ public final class VoidFlameLogsPlugin extends JavaPlugin implements Listener {
         return true;
     }
     private List<String> tab(CommandSender s,Command c,String a,String[] args){return args.length==1?List.of("10","25","50"):List.of();}
-    @Override public void onDisable(){if(logs!=null)getServer().getServicesManager().unregister(LogService.class,logs);}
+    @Override public void onDisable(){
+        if(logs!=null)getServer().getServicesManager().unregister(LogService.class,logs);
+        if(logs!=null)getServer().getServicesManager().unregister(AuditLogService.class,logs);
+    }
 }
