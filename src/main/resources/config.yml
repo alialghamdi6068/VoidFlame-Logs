@@ -1,4 +1,27 @@
-# VoidFlame compatibility: Paper 26.2 / Java 25
 settings:
   enabled: true
   module: logs
+  async-writes: true
+  queue-size: 5000
+  batch-size: 100
+  flush-interval-ms: 1000
+  retain-days: 90
+  search-page-size: 25
+  max-page-size: 100
+
+events:
+  duel: true
+  party: true
+  rank: true
+  kit: true
+  arena: true
+  admin: true
+  security: true
+  player: true
+
+filters:
+  actor-enabled: true
+  action-enabled: true
+  target-enabled: true
+  metadata-enabled: true
+  timestamp-enabled: true
