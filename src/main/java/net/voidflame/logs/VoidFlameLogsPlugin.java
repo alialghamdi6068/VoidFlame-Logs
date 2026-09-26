@@ -56,18 +56,34 @@ public final class VoidFlameLogsPlugin extends JavaPlugin implements Listener {
 
     private boolean command(CommandSender sender,Command cmd,String label,String[] args){
         if(!sender.hasPermission("voidflame.logs.view")){sender.sendMessage("§cNo permission.");return true;}
+        int page=1;
+        String action="";
+        String actor="";
+        if(args.length>0) try{page=Math.max(1,Integer.parseInt(args[0]));}catch(NumberFormatException ignored){action=args[0];}
+        if(args.length>1) action=args[1];
+        if(args.length>2) actor=args[2];
         int limit=10;
-        if(args.length>0) try{limit=Math.max(1,Math.min(50,Integer.parseInt(args[0])));}catch(NumberFormatException ignored){}
-        storage.database().query("SELECT actor,action,target,timestamp,metadata_json FROM audit_logs ORDER BY timestamp DESC LIMIT ?", limit)
+        int offset=(page-1)*limit;
+        StringBuilder sql=new StringBuilder("SELECT actor,action,target,timestamp,metadata_json FROM audit_logs WHERE 1=1");
+        List<Object> params=new ArrayList<>();
+        if(!action.isBlank()){sql.append(" AND action LIKE ?");params.add("%"+action+"%");}
+        if(!actor.isBlank()){sql.append(" AND actor LIKE ?");params.add("%"+actor+"%");}
+        sql.append(" ORDER BY timestamp DESC LIMIT ? OFFSET ?");
+        params.add(limit); params.add(offset);
+        storage.database().query(sql.toString(), params.toArray())
             .thenAccept(rows -> Bukkit.getScheduler().runTask(this,()->{
                 sender.sendMessage("§8§m----------------");
-                sender.sendMessage("§bVoidFlame Logs §7("+rows.size()+")");
+                sender.sendMessage("§bVoidFlame Logs §7Page "+page+" §8| §faction="+(action.isBlank()?"*":action)+" §8| §factor="+(actor.isBlank()?"*":actor));
+                if(rows.isEmpty()) sender.sendMessage("§7No logs matched.");
                 for(var row:rows) sender.sendMessage("§7• §f"+format(row));
                 sender.sendMessage("§8§m----------------");
             })).exceptionally(err->{sender.sendMessage("§cCould not read logs.");return null;});
         return true;
     }
-    private List<String> tab(CommandSender s,Command c,String a,String[] args){return args.length==1?List.of("10","25","50"):List.of();}
+    private List<String> tab(CommandSender s,Command c,String a,String[] args){
+        if(args.length==1)return List.of("1","2","3","10","25","50");
+        return List.of();
+    }
     @Override public void onDisable(){
         if(logs!=null)getServer().getServicesManager().unregister(LogService.class,logs);
         if(logs!=null)getServer().getServicesManager().unregister(AuditLogService.class,logs);
