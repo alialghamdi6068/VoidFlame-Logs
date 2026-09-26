@@ -25,7 +25,7 @@ public final class VoidFlameLogsPlugin extends JavaPlugin implements Listener {
         public CompletableFuture<Void> log(String actor,String action,String target,String metadata){
             String id=System.currentTimeMillis()+"-"+UUID.randomUUID();
             String value=String.join("|", safe(actor),safe(action),safe(target),Long.toString(System.currentTimeMillis()),safe(metadata));
-            return plugin.storage.put("logs",id,value);
+            return plugin.storage.database().execute("INSERT INTO audit_logs(actor,action,target,timestamp,metadata_json) VALUES(?,?,?,?,?)", safe(actor), safe(action), safe(target), System.currentTimeMillis(), json(metadata));
         }
         public CompletableFuture<Void> log(String action,String message){return log("SYSTEM",action,"",message);}
     }
@@ -41,7 +41,7 @@ public final class VoidFlameLogsPlugin extends JavaPlugin implements Listener {
         getLogger().info("VoidFlame-Logs enabled.");
     }
 
-    private static String safe(String s){return s==null?"":s.replace("|","/").replace("\n"," ");}
+    private static String safe(String s){return s==null?"":s.replace("\\","/").replace("\"","\\\"").replace("\n"," ").replace("\r"," ");}\n    private static String json(String s){return "\"" + safe(s) + "\"";}\n    private static String format(Map<String,Object> row){return "["+row.get("timestamp")+"] "+row.get("actor")+" "+row.get("action")+" -> "+row.get("target")+" | "+row.get("metadata_json");}
 
     @EventHandler public void join(PlayerJoinEvent e){logs.log(e.getPlayer().getUniqueId().toString(),"JOIN",e.getPlayer().getName(),"firstJoin="+e.getPlayer().hasPlayedBefore());}
     @EventHandler public void quit(PlayerQuitEvent e){logs.log(e.getPlayer().getUniqueId().toString(),"QUIT",e.getPlayer().getName(),"");}
@@ -53,11 +53,11 @@ public final class VoidFlameLogsPlugin extends JavaPlugin implements Listener {
         if(!sender.hasPermission("voidflame.logs.view")){sender.sendMessage("§cNo permission.");return true;}
         int limit=10;
         if(args.length>0) try{limit=Math.max(1,Math.min(50,Integer.parseInt(args[0])));}catch(NumberFormatException ignored){}
-        storage.query("SELECT data_key,data_value,updated_at FROM module_data WHERE module=? ORDER BY updated_at DESC LIMIT ?", "logs",limit)
+        storage.database().query("SELECT actor,action,target,timestamp,metadata_json FROM audit_logs ORDER BY timestamp DESC LIMIT ?", limit)
             .thenAccept(rows -> Bukkit.getScheduler().runTask(this,()->{
                 sender.sendMessage("§8§m----------------");
                 sender.sendMessage("§bVoidFlame Logs §7("+rows.size()+")");
-                for(var row:rows) sender.sendMessage("§7• §f"+String.valueOf(row.get("data_value")));
+                for(var row:rows) sender.sendMessage("§7• §f"+format(row));
                 sender.sendMessage("§8§m----------------");
             })).exceptionally(err->{sender.sendMessage("§cCould not read logs.");return null;});
         return true;
