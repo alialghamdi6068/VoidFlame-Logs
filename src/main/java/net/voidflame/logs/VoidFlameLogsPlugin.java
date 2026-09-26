@@ -1,6 +1,7 @@
 package net.voidflame.logs;
 
 import net.voidflame.core.storage.StorageService;
+import net.voidflame.core.api.AuditLogService;
 import org.bukkit.Bukkit;
 import org.bukkit.command.*;
 import org.bukkit.entity.Player;
@@ -19,9 +20,10 @@ public final class VoidFlameLogsPlugin extends JavaPlugin implements Listener {
     private StorageService storage;
     private LogService logs;
 
-    public static final class LogService {
+    public static final class LogService implements AuditLogService {
         private final VoidFlameLogsPlugin plugin;
         private LogService(VoidFlameLogsPlugin plugin){this.plugin=plugin;}
+        @Override
         public CompletableFuture<Void> log(String actor,String action,String target,String metadata){
             String id=System.currentTimeMillis()+"-"+UUID.randomUUID();
             String value=String.join("|", safe(actor),safe(action),safe(target),Long.toString(System.currentTimeMillis()),safe(metadata));
@@ -36,6 +38,7 @@ public final class VoidFlameLogsPlugin extends JavaPlugin implements Listener {
         if(r==null || (storage=r.getProvider())==null){getLogger().severe("VoidFlame-Core storage unavailable.");getServer().getPluginManager().disablePlugin(this);return;}
         logs=new LogService(this);
         getServer().getServicesManager().register(LogService.class,logs,this,ServicePriority.Normal);
+        getServer().getServicesManager().register(AuditLogService.class, logs, this, ServicePriority.Normal);
         getServer().getPluginManager().registerEvents(this,this);
         PluginCommand c=getCommand("vflogs"); if(c!=null){c.setExecutor(this::command);c.setTabCompleter(this::tab);}
         getLogger().info("VoidFlame-Logs enabled.");
