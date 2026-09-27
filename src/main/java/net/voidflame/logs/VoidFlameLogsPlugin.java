@@ -40,6 +40,9 @@ public final class VoidFlameLogsPlugin extends JavaPlugin implements Listener {
         getServer().getServicesManager().register(LogService.class,logs,this,ServicePriority.Normal);
         getServer().getServicesManager().register(AuditLogService.class, logs, this, ServicePriority.Normal);
         getServer().getPluginManager().registerEvents(this,this);
+        long retain = Math.max(1L, getConfig().getLong("settings.retain-days", 90L));
+        long intervalTicks = Math.max(20L, getConfig().getLong("settings.retention-check-interval-ticks", 20L * 3600L));
+        getServer().getScheduler().runTaskTimerAsynchronously(this, () -> prune(retain), intervalTicks, intervalTicks);
         PluginCommand c=getCommand("vflogs"); if(c!=null){c.setExecutor(this::command);c.setTabCompleter(this::tab);}
         getLogger().info("VoidFlame-Logs enabled.");
     }
@@ -48,11 +51,11 @@ public final class VoidFlameLogsPlugin extends JavaPlugin implements Listener {
     private static String json(String s){return "\"" + safe(s) + "\"";}
     private static String format(Map<String,Object> row){return "["+row.get("timestamp")+"] "+row.get("actor")+" "+row.get("action")+" -> "+row.get("target")+" | "+row.get("metadata_json");}
 
-    @EventHandler public void join(PlayerJoinEvent e){logs.log(e.getPlayer().getUniqueId().toString(),"JOIN",e.getPlayer().getName(),"firstJoin="+e.getPlayer().hasPlayedBefore());}
-    @EventHandler public void quit(PlayerQuitEvent e){logs.log(e.getPlayer().getUniqueId().toString(),"QUIT",e.getPlayer().getName(),"");}
-    @EventHandler public void command(PlayerCommandPreprocessEvent e){logs.log(e.getPlayer().getUniqueId().toString(),"COMMAND",e.getPlayer().getName(),e.getMessage());}
-    @EventHandler public void kick(PlayerKickEvent e){logs.log("SYSTEM","KICK",e.getPlayer().getName(),"reason="+e.getReason());}
-    @EventHandler public void death(PlayerDeathEvent e){logs.log(e.getEntity().getUniqueId().toString(),"DEATH",e.getEntity().getName(),e.getDeathMessage()==null?"":e.getDeathMessage());}
+    @EventHandler public void join(PlayerJoinEvent e){if(getConfig().getBoolean("events.player",true))logs.log(e.getPlayer().getUniqueId().toString(),"JOIN",e.getPlayer().getName(),"firstJoin="+e.getPlayer().hasPlayedBefore());}
+    @EventHandler public void quit(PlayerQuitEvent e){if(getConfig().getBoolean("events.player",true))logs.log(e.getPlayer().getUniqueId().toString(),"QUIT",e.getPlayer().getName(),"");}
+    @EventHandler public void command(PlayerCommandPreprocessEvent e){if(getConfig().getBoolean("events.admin",true))logs.log(e.getPlayer().getUniqueId().toString(),"COMMAND",e.getPlayer().getName(),e.getMessage());}
+    @EventHandler public void kick(PlayerKickEvent e){if(getConfig().getBoolean("events.player",true))logs.log("SYSTEM","KICK",e.getPlayer().getName(),"reason="+e.getReason());}
+    @EventHandler public void death(PlayerDeathEvent e){if(getConfig().getBoolean("events.player",true))logs.log(e.getEntity().getUniqueId().toString(),"DEATH",e.getEntity().getName(),e.getDeathMessage()==null?"":e.getDeathMessage());}
 
     private boolean command(CommandSender sender,Command cmd,String label,String[] args){
         if(!sender.hasPermission("voidflame.logs.view")){sender.sendMessage("§cNo permission.");return true;}
@@ -62,7 +65,7 @@ public final class VoidFlameLogsPlugin extends JavaPlugin implements Listener {
         if(args.length>0) try{page=Math.max(1,Integer.parseInt(args[0]));}catch(NumberFormatException ignored){action=args[0];}
         if(args.length>1) action=args[1];
         if(args.length>2) actor=args[2];
-        int limit=10;
+        int limit=Math.max(1, Math.min(getConfig().getInt("settings.max-page-size",100), getConfig().getInt("settings.search-page-size",25)));
         int offset=(page-1)*limit;
         StringBuilder sql=new StringBuilder("SELECT actor,action,target,timestamp,metadata_json FROM audit_logs WHERE 1=1");
         List<Object> params=new ArrayList<>();
@@ -83,6 +86,12 @@ public final class VoidFlameLogsPlugin extends JavaPlugin implements Listener {
             })).exceptionally(err->{sender.sendMessage("§cCould not read logs.");return null;});
         return true;
     }
+    private void prune(long retainDays) {
+        long cutoff = System.currentTimeMillis() - retainDays * 24L * 60L * 60L * 1000L;
+        storage.database().execute("DELETE FROM audit_logs WHERE timestamp < ?", cutoff)
+                .exceptionally(error -> { getLogger().warning("Log retention cleanup failed: " + error.getMessage()); return null; });
+    }
+
     private List<String> tab(CommandSender s,Command c,String a,String[] args){
         if(args.length==1)return List.of("1","2","3","10","25","50");
         return List.of();
