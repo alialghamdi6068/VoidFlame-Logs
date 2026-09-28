@@ -62,24 +62,32 @@ public final class VoidFlameLogsPlugin extends JavaPlugin implements Listener {
         int page=1;
         String action="";
         String actor="";
+        String target="";
+        String metadata="";
         if(args.length>0) try{page=Math.max(1,Integer.parseInt(args[0]));}catch(NumberFormatException ignored){action=args[0];}
         if(args.length>1) action=args[1];
         if(args.length>2) actor=args[2];
+        if(args.length>3) target=args[3];
+        if(args.length>4) metadata=args[4];
         int limit=Math.max(1, Math.min(getConfig().getInt("settings.max-page-size",100), getConfig().getInt("settings.search-page-size",25)));
         int offset=(page-1)*limit;
         StringBuilder sql=new StringBuilder("SELECT actor,action,target,timestamp,metadata_json FROM audit_logs WHERE 1=1");
         List<Object> params=new ArrayList<>();
         if(!action.isBlank()){sql.append(" AND action LIKE ?");params.add("%"+action+"%");}
         if(!actor.isBlank()){sql.append(" AND actor LIKE ?");params.add("%"+actor+"%");}
+        if(!target.isBlank() && getConfig().getBoolean("filters.target-enabled", true)){sql.append(" AND target LIKE ?");params.add("%"+target+"%");}
+        if(!metadata.isBlank() && getConfig().getBoolean("filters.metadata-enabled", true)){sql.append(" AND metadata_json LIKE ?");params.add("%"+metadata+"%");}
         sql.append(" ORDER BY timestamp DESC LIMIT ? OFFSET ?");
         params.add(limit); params.add(offset);
         final int requestedPage = page;
         final String requestedAction = action;
         final String requestedActor = actor;
+        final String requestedTarget = target;
+        final String requestedMetadata = metadata;
         storage.database().query(sql.toString(), params.toArray())
             .thenAccept(rows -> Bukkit.getScheduler().runTask(this,()->{
                 sender.sendMessage("§8§m----------------");
-                sender.sendMessage("§bVoidFlame Logs §7Page "+requestedPage+" §8| §faction="+(requestedAction.isBlank()?"*":requestedAction)+" §8| §factor="+(requestedActor.isBlank()?"*":requestedActor));
+                sender.sendMessage("§bVoidFlame Logs §7Page "+requestedPage+" §8| §faction="+(requestedAction.isBlank()?"*":requestedAction)+" §8| §factor="+(requestedActor.isBlank()?"*":requestedActor)+" §8| §ftarget="+(requestedTarget.isBlank()?"*":requestedTarget)+" §8| §fmeta="+(requestedMetadata.isBlank()?"*":requestedMetadata));
                 if(rows.isEmpty()) sender.sendMessage("§7No logs matched.");
                 for(var row:rows) sender.sendMessage("§7• §f"+format(row));
                 sender.sendMessage("§8§m----------------");
@@ -94,6 +102,7 @@ public final class VoidFlameLogsPlugin extends JavaPlugin implements Listener {
 
     private List<String> tab(CommandSender s,Command c,String a,String[] args){
         if(args.length==1)return List.of("1","2","3","10","25","50");
+        if(args.length==2)return List.of("DUEL_FINISH","PARTY_MATCH_FINISH","KIT_APPLY","ARENA_RESET_SUCCESS","ARENA_RESET_FAILURE","SECURITY_VIOLATION");
         return List.of();
     }
     @Override public void onDisable(){
