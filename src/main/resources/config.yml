@@ -1,3 +1,8 @@
+# ================================================================
+# VoidFlame Logs • Production Configuration
+# Paper 26.2 • Java 25
+# ================================================================
+# Async audit pipeline, retention, pagination and event filters.
 settings:
   enabled: true
   module: logs
@@ -6,6 +11,8 @@ settings:
   batch-size: 100
   flush-interval-ms: 1000
   retain-days: 90
+  # Run retention cleanup once per hour by default (20 ticks/sec × 3600).
+  retention-check-interval-ticks: 72000
   search-page-size: 25
   max-page-size: 100
 
