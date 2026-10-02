@@ -11,7 +11,7 @@ depend: [VoidFlame-Core]
 commands:
   vflogs:
     description: View recent VoidFlame audit logs.
-    usage: /vflogs [10|25|50]
+    usage: /vflogs [gui|page [action] [actor] [target] [metadata]]
     permission: voidflame.logs.view
 
 permissions:
