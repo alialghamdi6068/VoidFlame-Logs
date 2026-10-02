@@ -112,7 +112,7 @@ public final class VoidFlameLogsPlugin extends JavaPlugin implements Listener {
             int slot=9;
             for(var row:rows){if(slot>=45)break; button(inv,slot++,org.bukkit.Material.PAPER,"§f"+row.get("action"),"§7Actor: §f"+row.get("actor"),"§7Target: §f"+row.get("target"),"§8"+row.get("timestamp")); }
             player.openInventory(inv);
-        })).exceptionally(e->{player.sendMessage("§cCould not read logs.");return null;});
+        })).exceptionally(e->{Bukkit.getScheduler().runTask(this, () -> player.sendMessage("§cCould not read logs."));return null;});
     }
     private void button(org.bukkit.inventory.Inventory inv,int slot,org.bukkit.Material mat,String name,String... lore){
         if(slot>=inv.getSize())return; org.bukkit.inventory.ItemStack it=new org.bukkit.inventory.ItemStack(mat); org.bukkit.inventory.meta.ItemMeta m=it.getItemMeta();
@@ -120,7 +120,13 @@ public final class VoidFlameLogsPlugin extends JavaPlugin implements Listener {
     }
     @EventHandler public void logsGuiClick(org.bukkit.event.inventory.InventoryClickEvent e){
         if(!(e.getWhoClicked() instanceof Player p)||!e.getView().getTitle().startsWith("§8VoidFlame §5• §dLogs"))return;
-        e.setCancelled(true); int slot=e.getRawSlot(); if(slot==45){openGui(p,1,"");} else if(slot==53)p.closeInventory();
+        e.setCancelled(true); int slot=e.getRawSlot(); if(slot==45){
+            String title=e.getView().getTitle();
+            int marker=title.lastIndexOf("§7");
+            int page=1;
+            if(marker>=0){try{page=Math.max(1,Integer.parseInt(title.substring(marker+2).trim())-1);}catch(NumberFormatException ignored){}}
+            openGui(p,page,"");
+        } else if(slot==53)p.closeInventory();
     }
 
     private void prune(long retainDays) {
