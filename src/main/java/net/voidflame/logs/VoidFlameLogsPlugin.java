@@ -64,7 +64,7 @@ public final class VoidFlameLogsPlugin extends JavaPlugin implements Listener {
         String actor="";
         String target="";
         String metadata="";
-        if(args.length>0) try{page=Math.max(1,Integer.parseInt(args[0]));}catch(NumberFormatException ignored){action=args[0];}
+        if(args.length>0 && args[0].equalsIgnoreCase("gui") && sender instanceof Player player){openGui(player,1,"");return true;} if(args.length>0) try{page=Math.max(1,Integer.parseInt(args[0]));}catch(NumberFormatException ignored){action=args[0];}
         if(args.length>1) action=args[1];
         if(args.length>2) actor=args[2];
         if(args.length>3) target=args[3];
@@ -94,6 +94,33 @@ public final class VoidFlameLogsPlugin extends JavaPlugin implements Listener {
             })).exceptionally(err->{sender.sendMessage("§cCould not read logs.");return null;});
         return true;
     }
+    private void openGui(Player player,int page,String action){
+        Inventory inv=Bukkit.createInventory(null,54,"§8VoidFlame §5• §dLogs §7"+page);
+        ItemStack filler=new ItemStack(org.bukkit.Material.BLACK_STAINED_GLASS_PANE);
+        org.bukkit.inventory.meta.ItemMeta fm=filler.getItemMeta(); if(fm!=null){fm.setDisplayName(" ");filler.setItemMeta(fm);}
+        for(int i=0;i<54;i++)inv.setItem(i,filler.clone());
+        button(inv,4,org.bukkit.Material.BOOK,"§5§lAUDIT LOG CENTER","§7Persistent logs from VoidFlame-Core","§8Filter and inspect server activity");
+        button(inv,45,org.bukkit.Material.ARROW,"§e§lPREVIOUS","§7Open previous page");
+        button(inv,49,org.bukkit.Material.COMPARATOR,"§b§lFILTER","§7Current action: "+(action.isBlank()?"All":action),"§8Use /vflogs <page> <action> for exact filtering");
+        button(inv,53,org.bukkit.Material.BARRIER,"§c§lCLOSE");
+        int limit=45,offset=Math.max(0,page-1)*limit;
+        String sql="SELECT actor,action,target,timestamp,metadata_json FROM audit_logs WHERE 1=1"+(action.isBlank()?"":" AND action LIKE ?")+" ORDER BY timestamp DESC LIMIT ? OFFSET ?";
+        List<Object> params=new ArrayList<>(); if(!action.isBlank())params.add("%"+action+"%");params.add(limit);params.add(offset);
+        storage.database().query(sql,params.toArray()).thenAccept(rows->Bukkit.getScheduler().runTask(this,()->{
+            int slot=9;
+            for(var row:rows){if(slot>=45)break; button(inv,slot++,org.bukkit.Material.PAPER,"§f"+row.get("action"),"§7Actor: §f"+row.get("actor"),"§7Target: §f"+row.get("target"),"§8"+row.get("timestamp")); }
+            player.openInventory(inv);
+        })).exceptionally(e->{player.sendMessage("§cCould not read logs.");return null;});
+    }
+    private void button(org.bukkit.inventory.Inventory inv,int slot,org.bukkit.Material mat,String name,String... lore){
+        if(slot>=inv.getSize())return; org.bukkit.inventory.ItemStack it=new org.bukkit.inventory.ItemStack(mat); org.bukkit.inventory.meta.ItemMeta m=it.getItemMeta();
+        if(m!=null){m.setDisplayName(name);m.setLore(Arrays.asList(lore));it.setItemMeta(m);} inv.setItem(slot,it);
+    }
+    @EventHandler public void logsGuiClick(org.bukkit.event.inventory.InventoryClickEvent e){
+        if(!(e.getWhoClicked() instanceof Player p)||!e.getView().getTitle().startsWith("§8VoidFlame §5• §dLogs"))return;
+        e.setCancelled(true); int slot=e.getRawSlot(); if(slot==45){openGui(p,1,"");} else if(slot==53)p.closeInventory();
+    }
+
     private void prune(long retainDays) {
         long cutoff = System.currentTimeMillis() - retainDays * 24L * 60L * 60L * 1000L;
         storage.database().execute("DELETE FROM audit_logs WHERE timestamp < ?", cutoff)
