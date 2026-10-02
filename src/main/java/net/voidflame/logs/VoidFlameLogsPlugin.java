@@ -93,7 +93,7 @@ public final class VoidFlameLogsPlugin extends JavaPlugin implements Listener {
                 if(rows.isEmpty()) sender.sendMessage("§7No logs matched.");
                 for(var row:rows) sender.sendMessage("§7• §f"+format(row));
                 sender.sendMessage("§8§m----------------");
-            })).exceptionally(err->{sender.sendMessage("§cCould not read logs.");return null;});
+            })).exceptionally(err->{ Bukkit.getScheduler().runTask(this, () -> sender.sendMessage("§cCould not read logs.")); return null; });
         return true;
     }
     private void openGui(Player player,int page,String action){
